@@ -1,4 +1,4 @@
-package importing
+package asset;
 
 import org.entermediadb.asset.Asset
 import org.entermediadb.asset.CompositeAsset
