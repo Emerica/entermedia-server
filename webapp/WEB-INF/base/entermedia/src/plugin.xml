@@ -1735,6 +1735,11 @@
 		<property name="exec"><ref bean="exec" /></property>
 	</bean>
 	
+	<bean id="rabbitmqTranscoder" class="org.entermediadb.asset.convert.transcoders.RabbitMQTranscoder" scope="prototype">
+                <property name="pageManager"><ref bean="pageManager" /></property>
+                <property name="exec"><ref bean="exec" /></property>
+        </bean>
+
 	<bean id="mathutil"  class="org.entermediadb.asset.util.MathUtils" />	
 	<bean id="JsonAssetModule" class="org.entermediadb.asset.mediadb.JsonAssetModule"  />
 	<bean id="JsonDataModule" class="org.entermediadb.asset.mediadb.JsonDataModule"  />
@@ -1953,7 +1958,7 @@
 				<ref bean="exiftoolMetadataExtractor" />
 				<ref bean="ffmpegMetadataExtractor" />
 				<ref bean="md5MetadataExtractor" />
-								<ref bean="geoTiffExtractor" />
+				<ref bean="geoTiffExtractor" />
 				
 			</list>
 		</property>
