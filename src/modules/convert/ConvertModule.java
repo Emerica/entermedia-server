@@ -78,5 +78,30 @@ public class ConvertModule extends BaseMediaModule
 			logger.info("Total Pending Tasks: " + manager.getTotalPending());
 			logger.info("Threads running: " + manager.runningProcesses());
 		}
-	}	
+	}
+	public void updateStatus(WebPageRequest inReq)
+	{
+		//load up the preset id
+		String presetid = inReq.findValue("presetid");
+		//Asset id
+		String assetid = inReq.findValue("assetid");
+		//Asset id
+		String statusid = inReq.findValue("status");
+		//Get the archive
+		MediaArchive archive = getMediaArchive(inReq);
+		//Lookup the asset
+		Asset asset = archive.getAsset(assetid);
+		Searcher tasksearcher = archive.getSearcher("conversiontask");
+		Data preset = (Data) archive.getSearcher("convertpreset").searchById( presetid );
+		Data status = (Data) archive.getSearcher("convertstatus").searchById( statusid );
+		Data task = tasksearcher.query().match("assetid", asset.getId() ).match("presetid", preset.getId() ).searchOne();		
+		if( task != null )
+		{
+			System.err.println("update" + status.getId());
+			//Found an active task....update the status
+			task.setProperty("status", status.getId());
+			tasksearcher.saveData(task, null);
+			return;
+		}
+	}
 }
