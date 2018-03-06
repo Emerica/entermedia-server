@@ -137,8 +137,9 @@ public class RabbitMQTranscoder extends BaseTranscoder
 		result.setOk(true);
 		
 		//The job is not complete yet.. Hopefully this works!
-		result.setComplete(false);
-		
+		//result.setComplete(false);
+		//Lets try this instead, and add an endpoint to the api which can complete
+		result.setProperty("status", "submitted");
 		return result;
 	}
 }
