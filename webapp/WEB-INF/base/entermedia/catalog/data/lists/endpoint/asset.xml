@@ -71,6 +71,11 @@ If you include a "fetchurl" parameter, EnterMedia will download the file at that
     <endpoint id="customthumb" name="Conversion Override" url="/${applicationid}/services/module/asset/media/customthumb" caption="Creates custom thumbnails for assets" httpmethod="POST" docsection="assetmedia" uploadfile="true"> 
     <samplerequest><![CDATA[{"assetid":"101"}]]></samplerequest>Conversion Override
   </endpoint>  
+  
+  <endpoint id="updateconversions" name="Conversion Status" url="/${applicationid}/services/module/asset/media/updateconversions" caption="Update conversion status" httpmethod="POST" docsection="assetmedia"> 
+    <samplerequest><![CDATA[{"assetid":"101", "presetid":"xxx", "status":"complete"}]]></samplerequest>Conversion Status
+  </endpoint> 
+  
   <endpoint id="listconversions" name="List Conversions" url="/${applicationid}/services/module/asset/media/listconversions" httpmethod="POST" caption="Lists conversions" docsection="assetmedia"> 
     <samplerequest><![CDATA[{"assetid":"101"}]]></samplerequest>List Conversions
   </endpoint>  
