@@ -503,7 +503,7 @@
 	</bean>
 
 
-<bean id="geoTiffExtractor"
+	<bean id="geoTiffExtractor"
 		class="org.entermediadb.asset.scanner.GeoTiffMetadataExtractor">
 		<property name="exec">
 			<ref bean="exec" />
@@ -516,6 +516,14 @@
 			<ref bean="exec" />
 		</property>
 	</bean>
+
+	<bean id="MediaConchExtractor"
+                class="org.entermediadb.asset.scanner.MediaConchExtractor">
+                <property name="exec">
+                        <ref bean="exec" />
+                </property>
+        </bean>
+
 
 	<bean id="creatorManager" class="org.entermediadb.asset.creator.CreatorManager"
 		scope="prototype">
@@ -1959,7 +1967,7 @@
 				<ref bean="ffmpegMetadataExtractor" />
 				<ref bean="md5MetadataExtractor" />
 				<ref bean="geoTiffExtractor" />
-				
+				<ref bean="MediaConchExtractor" />
 			</list>
 		</property>
 	</bean>
