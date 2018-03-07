@@ -56,9 +56,13 @@ public class RabbitMQTranscoder extends BaseTranscoder
 		//Asset Id file
 		json.put("assetid", inAsset.getId().toString());
 		
+		//Asset Id file
+		json.put("presetid", inStructions.get("id"));
+		
 		//Create the message string
 		String message = json.toString();
-		
+		log.info("RabbitMQ message : " + message);
+
 		//Get the queue name from the preset
 		String queue = inStructions.get("queue");
 		log.info("RabbitMQ queue : " + queue);
