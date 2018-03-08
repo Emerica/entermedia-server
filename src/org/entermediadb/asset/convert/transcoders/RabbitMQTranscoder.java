@@ -56,8 +56,8 @@ public class RabbitMQTranscoder extends BaseTranscoder
 		//Asset Id file
 		json.put("assetid", inAsset.getId().toString());
 		
-		//Asset Id file
-		json.put("presetid", inStructions.get("id"));
+		//Preset Id
+		json.put("presetid", inStructions.getConvertPreset().getId());
 		
 		//Create the message string
 		String message = json.toString();
