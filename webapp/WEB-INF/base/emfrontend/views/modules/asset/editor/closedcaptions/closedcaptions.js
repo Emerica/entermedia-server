@@ -59,6 +59,11 @@ $(document).ready(function()
 
 	saveCaptionToServer = function()
 	{
+		//update the data
+//		var starttime = video.currentTime;
+//		$("#captionstart").text(parseTimeToText(starttime));
+//		$("#timecodestart").val( Math.round(starttime * 1000 ) );
+	
 		$("#addcaption").ajaxSubmit({
 			target:"#captionview",
 			error: function(data)
@@ -68,12 +73,10 @@ $(document).ready(function()
 			success: function() 
 			{
 				$("#captioninput").val("");
-				//stopchunk();
-				//startchunk();
-				starttime = video.currentTime;
-				$("#captionstart").text(parseTimeToText(starttime));
-				$("#timecodestart").val( Math.round(starttime * 1000 ) );
 				$("#scrollarea").scrollTop($("#scrollarea")[0].scrollHeight);
+				var endingtime = video.currentTime + 8;
+				$("#timecodelength").val(8000);
+				$("#captionend").text(parseTimeToText(endingtime));
 			}
 	 	});
 	}	
@@ -140,9 +143,9 @@ $(document).ready(function()
 			 {
 			 	stopchunk();
 			 }
+		 	var inTime = video.currentTime + 8;
+			$("#captionend").text(parseTimeToText(inTime));
 		}
-	 	var inTime = video.currentTime + 8;
-		$("#captionend").text(parseTimeToText(inTime));
 	});	
 	
 	jQuery("#removetime").livequery("click",function(e)
@@ -160,7 +163,62 @@ $(document).ready(function()
 		video.currentTime = video.currentTime + .5;
 		return false;
 	});
+	jQuery("#removecaption").livequery("click",function(e)
+	{
+		e.preventDefault();
+		var link = $(this);
+		
+		$("#captioninput").val("");
+		
+		$("#addcaption").ajaxSubmit({
+			target:"#captionview",
+			error: function(data)
+			{
+				$("#captionview").html(data);
+			},
+			success: function() 
+			{
+			}
+	 	});
+		
+		return false;
+	});
+
+
+	selectClip = function(div)
+	{
+		var div = $(div).closest(".data-selection");
+		$(".data-selection").removeClass("selectedclip");
+		div.addClass("selectedclip");
+		updateDetails();
+	}
 	
+	updateDetails = function(jumptoend)
+	{
+		var selected = $(".selectedclip");
+	
+		$("#captioninput").val( selected.data("cliplabel") );
+		var decstart = selected.data("timecodestart");
+		decstart = parseFloat(decstart);
+		if( decstart )
+		{
+			video.currentTime = decstart / 1000;
+		}
+		var declength = selected.data("timecodelength");
+		declength = parseFloat(declength);
+		$("#timecodelength").val(declength);
+		var ending = (decstart + declength);
+		$("#captionend").text(parseTimeToText(ending/1000));
+		
+	}
+
+	
+	jQuery(".data-selection").livequery("click",function(e)
+	{
+		e.preventDefault();
+		selectClip(this);
+		updateDetails();
+	});	
 	
 		
 });

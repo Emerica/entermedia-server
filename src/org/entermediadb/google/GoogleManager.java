@@ -226,7 +226,12 @@ public class GoogleManager implements CatalogEnabled {
 					log.info("Expiring token");
 				}
 			}
+		} else {
+			
+			
+			force=true;
 		}
+		
 
 		if (accesstoken == null || force) {
 			OAuthClientRequest request = OAuthClientRequest.tokenProvider(OAuthProviderType.GOOGLE)

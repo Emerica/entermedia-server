@@ -27,6 +27,7 @@ import org.openedit.OpenEditException;
 import org.openedit.WebPageRequest;
 import org.openedit.data.Searcher;
 import org.openedit.hittracker.HitTracker;
+import org.openedit.locks.Lock;
 import org.openedit.page.Page;
 import org.openedit.util.FileUtils;
 import org.openedit.util.PathUtilities;
@@ -179,6 +180,24 @@ public class TimelineModule extends BaseMediaModule
 		
 	}
 	
+	
+	public void loadClosedCaptions(WebPageRequest inReq) 
+	{
+		if( inReq.getResponse() != null)
+		{
+			inReq.getResponse().setHeader("Access-Control-Allow-Origin","*");
+		}
+		MediaArchive archive = getMediaArchive(inReq);
+		
+		Searcher captionsearcher = archive.getSearcher("videotrack");
+		Asset asset = getAsset(inReq);
+		
+		Collection tracks = captionsearcher.query().exact("assetid", asset.getId()).sort("sourcelang").search(inReq);
+		inReq.putPageValue("tracks", tracks);
+		inReq.putPageValue("captionsearcher", captionsearcher);
+		
+	}
+	
 	public void importCaptions(WebPageRequest inReq) throws Exception
 	{
 		
@@ -239,7 +258,6 @@ public class TimelineModule extends BaseMediaModule
 			
 			HashMap cuemap = new HashMap();
 			cuemap.put("cliplabel", cue.getText().toString());
-			//cuemap.put("position", cue.getPosition());
 			cuemap.put("alignment", cue.getAlignment());
 			long start = cue.getStartTime();
 			cuemap.put("timecodestart", start);
@@ -273,9 +291,14 @@ public class TimelineModule extends BaseMediaModule
 		Data lasttrack = captionsearcher.query().exact("assetid", asset.getId()).exact("sourcelang", selectedlang).searchOne();
 		if( lasttrack == null)
 		{
+			log.info("Creating track " + asset.getId() + " " + selectedlang);
 			lasttrack = captionsearcher.createNewData();
 			lasttrack.setProperty("sourcelang", selectedlang);
 			lasttrack.setProperty("assetid",  asset.getId());
+		}
+		else
+		{
+			lasttrack = captionsearcher.loadData(lasttrack);
 		}
 		Collection captions = (Collection)lasttrack.getValue("captions");
 		if( captions == null)
@@ -293,10 +316,35 @@ public class TimelineModule extends BaseMediaModule
 		String timecodelength = inReq.getRequestParameter("timecodelength");
 		cuemap.put("timecodelength", Long.parseLong( timecodelength ));
 		log.info("Saved " + starttime + " " + timecodelength);
-		captions.add(cuemap);
+		captions = removeDuplicate(captions,cuemap);
+		if( cliplabel != null && !cliplabel.isEmpty() )
+		{
+			captions.add(cuemap);			
+		}
 		lasttrack.setValue("captions",captions);
 		captionsearcher.saveData(lasttrack);
 	}	
+	protected Collection removeDuplicate(Collection inCaptions, Map inCuemap)
+	{
+		Long start = (Long)inCuemap.get("timecodestart");
+		Long length = (Long)inCuemap.get("timecodelength");
+		
+		Collection copy = new ArrayList(inCaptions);
+		
+		for (Iterator iterator = inCaptions.iterator(); iterator.hasNext();)
+		{
+			Map existing = (Map) iterator.next();
+			Long exstart = (Long)existing.get("timecodestart");
+			Long exlength = (Long)existing.get("timecodelength");
+			if(exstart.equals(start) && exlength.equals( length))
+			{
+				copy.remove(existing);
+			}
+		}
+		return copy;
+		
+	}
+
 	public void deleteTrack(WebPageRequest inReq)
 	{
 		MediaArchive archive = getMediaArchive(inReq);
@@ -350,20 +398,66 @@ public class TimelineModule extends BaseMediaModule
 //		timeline.selectClip(selected);
 		
 		inReq.putPageValue("timeline", timeline);
-
-		
 	}
 	
-	
-	public void autoTranscode(WebPageRequest inReq)
+	public void addAutoTranscode(WebPageRequest inReq) throws Exception
 	{
+		//<path-action name="PathEventModule.runSharedEvent" runpath="/${catalogid}/events/conversions/autotranscode.html" allowduplicates="true" />
 		MediaArchive archive = getMediaArchive(inReq);
-		String catalogid = archive.getCatalogId();
 		String selectedlang = inReq.getRequestParameter("selectedlang");
 
 		Asset asset = getAsset(inReq);
-		CloudTranscodeManager manager = (CloudTranscodeManager)getModuleManager().getBean(catalogid, "cloudTranscodeManager");
-	//	manager.transcodeCaptions(asset,selectedlang);
+		Searcher captionsearcher = archive.getSearcher("videotrack");
+		Data lasttrack = captionsearcher.query().exact("assetid", asset.getId()).exact("sourcelang", selectedlang).searchOne();
+		if( lasttrack == null)
+		{
+			log.info("Creating track " + asset.getId() + " " + selectedlang);
+			lasttrack = captionsearcher.createNewData();
+			lasttrack.setProperty("sourcelang", selectedlang);
+			lasttrack.setProperty("assetid",  asset.getId());
+		}
+		lasttrack.setValue("transcribestatus", "needstranscribe");
+		captionsearcher.saveData(lasttrack);
+		inReq.putPageValue("track", lasttrack);
+//		inRe
+//		CloudTranscodeManager manager = (CloudTranscodeManager)getModuleManager().getBean(catalogid, "cloudTranscodeManager");
+//		manager.transcodeCaptions(asset,selectedlang);
+		archive.fireSharedMediaEvent("asset/autotranscribe");
 	}
-	
+	public void autoTranscodeQueue(WebPageRequest inReq) throws Exception
+	{
+		//<path-action name="PathEventModule.runSharedEvent" runpath="/${catalogid}/events/conversions/autotranscode.html" allowduplicates="true" />
+
+		MediaArchive archive = getMediaArchive(inReq);
+		CloudTranscodeManager manager = (CloudTranscodeManager)getModuleManager().getBean(archive.getCatalogId(), "cloudTranscodeManager");
+
+		Searcher captionsearcher = archive.getSearcher("videotrack");
+
+		String selectedlang = inReq.getRequestParameter("selectedlang");
+		Collection hits = captionsearcher.query().exact("transcribestatus", "needstranscribe").search();
+		for (Iterator iterator = hits.iterator(); iterator.hasNext();)
+		{
+			Data track = (Data) iterator.next();
+			Lock lock = archive.getLockManager().lockIfPossible("transcode" + track.get("assetid"), "autoTranscodeQueue");
+			try
+			{
+				if( lock != null)
+				{
+					manager.transcodeCaptions(track);
+					track.setValue("transcribestatus", "complete");
+				}
+			}
+			catch (Throwable ex)
+			{
+				log.error("Could not prcoess" , ex);
+				track.setValue("transcribestatus", "error");				
+			} 
+			finally
+			{
+				captionsearcher.saveData(track);
+				archive.releaseLock(lock);
+			}
+		}
+		
+	}	
 }
