@@ -46,9 +46,9 @@ public class RabbitMQTranscoder extends BaseTranscoder
 		
 		//Create a structured message
 		JSONObject json = new JSONObject();
-		
+				
 		//Input file
-		json.put("input", inputpage.getAbsolutePath().toString());
+		json.put("input", inStructions.getOriginalDocument().getAbsolutePath().toString());
 		
 		//Output File
 		json.put("output", inStructions.getOutputFile().getAbsolutePath().toString());
@@ -153,5 +153,6 @@ public class RabbitMQTranscoder extends BaseTranscoder
 
 		result.setProperty("status", "queued");
 		return result;
+		
 	}
 }
