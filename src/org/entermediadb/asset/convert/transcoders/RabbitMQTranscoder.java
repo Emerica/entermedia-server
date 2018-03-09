@@ -141,9 +141,17 @@ public class RabbitMQTranscoder extends BaseTranscoder
 		result.setOk(true);
 		
 		//The job is not complete yet.. Hopefully this works!
-		//result.setComplete(false);
-		//Lets try this instead, and add an endpoint to the api which can complete
-		result.setProperty("status", "submitted");
+		//Tell entermedia it's complete to release any resources
+		result.setComplete(false); //redundant
+		
+		//Needed a new state
+		result.setQueued(true);
+
+		//Try to now update the status to queued....
+		//This way it's not complete, but also not in a processing state which would attempt retry.
+		//This is a hack.. arg.
+
+		result.setProperty("status", "queued");
 		return result;
 	}
 }
