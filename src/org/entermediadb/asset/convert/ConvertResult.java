@@ -7,6 +7,7 @@ public class ConvertResult extends BaseData
 {
 	protected boolean fieldOk;
 	protected boolean fieldComplete;
+	protected boolean fieldQueued;
 	protected String fieldError;
 	protected ContentItem fieldOutput;
 	protected ConvertInstructions fieldInstructions;
@@ -39,6 +40,16 @@ public class ConvertResult extends BaseData
 	public void setComplete(boolean inComplete) 
 	{
 		fieldComplete = inComplete;
+	}
+	
+	public boolean isQueued() 
+	{
+		return fieldQueued;
+	}
+	
+	public void setQueued(boolean inQueued) 
+	{
+		fieldComplete = inQueued;
 	}
 	
 	public String getError()
