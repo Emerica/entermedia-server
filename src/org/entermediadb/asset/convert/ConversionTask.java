@@ -114,6 +114,14 @@ public void convert()
 			//mediaarchive.fireMediaEvent("conversions","conversioncomplete",user,asset);
 			//mediaarchive.updateAssetConvertStatus(hit.get("sourcepath"));
 		}
+		else if(result.isQueued())
+		{
+			realtask.setProperty("status", "queued");
+			realtask.setProperty("externalid", result.get("externalid"));
+			realtask.setValue("completed",new Date());
+			realtask.setProperty("errordetails","");
+			tasksearcher.saveData(realtask, user);
+		}
 		else
 		{
 			realtask.setProperty("status", "submitted");
