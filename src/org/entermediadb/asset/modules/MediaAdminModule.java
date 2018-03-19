@@ -465,20 +465,20 @@ public class MediaAdminModule extends BaseMediaModule
 		//make us a catalog id
 		//Download a snapshot? no use snapshots by URL to do that. Show a URL and allow paste of URL
 		String sitename = inReq.getRequestParameter("sitename");
-
-		
 		Searcher sites = getSearcherManager().getSearcher("system", "site");
-		Data site = sites.createNewData();
 		String rootpath = inReq.getRequestParameter("rootpath");
-		site.setValue("rootpath", rootpath);
-		
 		String catalogid = inReq.getRequestParameter("sitecatalogid");
 		if( catalogid == null)
 		{
 			catalogid = rootpath.substring(1) + "/catalog";
 		}
-		Searcher catsearcher = getSearcherManager().getSearcher("system", "catalog");
 		
+		boolean hasUppercase = !catalogid.equals(catalogid.toLowerCase());
+		if(hasUppercase) {
+			throw new OpenEditException("Index id cannot be uppercase: " + catalogid);
+		}
+		
+		Searcher catsearcher = getSearcherManager().getSearcher("system", "catalog");
 		Data catalog = (Data)catsearcher.searchById(catalogid);
 		if( catalog == null)
 		{
@@ -488,6 +488,8 @@ public class MediaAdminModule extends BaseMediaModule
 			catsearcher.saveData(catalog);
 		}
 		
+		Data site = sites.createNewData();
+		site.setValue("rootpath", rootpath);
 		site.setValue("catalogid", catalogid);
 		site.setName(sitename);
 		sites.saveData(site);
