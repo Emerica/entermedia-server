@@ -390,14 +390,6 @@ public class MediaAdminModule extends BaseMediaModule
 			}
 			catch ( Exception ex)
 			{
-				//Server allows for entering uppercase, creating the entry but failing afterwards.
-				//This is a hack to fix my current situation, not knowing where the indicies are stored.
-				//TODO- Prevent uppercase, not just warn.
-				
-				//SEVERE: [Darlington-0] InvalidIndexNameException[Invalid index name [Darlington-0], must be lowercase]
-
-				
-				
 				log.error(ex);
 			}
 		}
