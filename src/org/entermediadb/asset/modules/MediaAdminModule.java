@@ -338,6 +338,30 @@ public class MediaAdminModule extends BaseMediaModule
 			{
 				Data data = (Data) iterator.next();
 				String catalogid = data.getId();
+				boolean hasUppercase = !catalogid.equals(catalogid.toLowerCase());
+				if(hasUppercase) {
+					log.error("There is an index that was created with uppercase: " + catalogid);
+					Searcher searcher = getSearcherManager().getSearcher("system", "catalog");
+					Data catalog = (Data)searcher.searchById(catalogid);
+					if( catalog != null)
+					{
+						searcher.delete(catalog, null);
+					}
+					if( catalogid.endsWith("catalog"))
+					{
+						Page home = getPageManager().getPage("/" + catalogid.substring(0, catalogid.lastIndexOf("/catalog") ), true);
+						getPageManager().removePage(home);
+					}
+					else
+					{
+						Page home = getPageManager().getPage("/" + catalogid, true);
+						getPageManager().removePage(home);			
+					}
+					Page cdata = getPageManager().getPage("/WEB-INF/data/" + catalogid, true);
+					getPageManager().removePage(cdata);
+					NodeManager nodeManager = (NodeManager)getModuleManager().getBean(catalogid,"nodeManager");
+					nodeManager.deleteCatalog(catalogid);
+				}
 				
 				NodeManager nodemanager = (NodeManager)getModuleManager().getBean(catalogid,"nodeManager");
 				boolean existed = nodemanager.containsCatalog(catalogid);
@@ -366,6 +390,14 @@ public class MediaAdminModule extends BaseMediaModule
 			}
 			catch ( Exception ex)
 			{
+				//Server allows for entering uppercase, creating the entry but failing afterwards.
+				//This is a hack to fix my current situation, not knowing where the indicies are stored.
+				//TODO- Prevent uppercase, not just warn.
+				
+				//SEVERE: [Darlington-0] InvalidIndexNameException[Invalid index name [Darlington-0], must be lowercase]
+
+				
+				
 				log.error(ex);
 			}
 		}
