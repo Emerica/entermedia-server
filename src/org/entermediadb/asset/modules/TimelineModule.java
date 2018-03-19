@@ -28,6 +28,7 @@ import org.openedit.WebPageRequest;
 import org.openedit.data.Searcher;
 import org.openedit.hittracker.HitTracker;
 import org.openedit.locks.Lock;
+import org.openedit.modules.translations.Translation;
 import org.openedit.page.Page;
 import org.openedit.util.FileUtils;
 import org.openedit.util.PathUtilities;
@@ -86,8 +87,9 @@ public class TimelineModule extends BaseMediaModule
 		for (Iterator iterator = clips.iterator(); iterator.hasNext();)
 		{
 			Map clip = (Map) iterator.next();
-			MathUtils.cleanTypes(clip);			
+			MathUtils.cleanLongTypes(clip);			
 		}
+		log.info(clips);
 		asset.setValue("clips", clips);
 		
 		archive.saveAsset(asset);
@@ -238,15 +240,6 @@ public class TimelineModule extends BaseMediaModule
 		}
 		String selectedlang = inReq.getRequestParameter("selectedlang");
 		if( selectedlang == null)
-		{
-			String type = PathUtilities.extractPageName(fname);
-			int place = type.lastIndexOf("-");
-			if( place == type.length() - 3) 
-			{
-				selectedlang = type.substring(place + 1);
-			}	
-		}
-		if( selectedlang == null)
 		{	
 			selectedlang = inReq.getLocale();
 		}
@@ -361,6 +354,11 @@ public class TimelineModule extends BaseMediaModule
 	
 		captionsearcher.delete(lasttrack,null);
 	}	
+	public void switchLang(WebPageRequest inReq)
+	{
+		String selectedlang = (String)inReq.getRequestParameter("selectedlang");
+		inReq.putSessionValue("selectedlang",selectedlang);
+	}
 	public void loadCaptionEditor(WebPageRequest inReq)
 	{
 		MediaArchive archive = getMediaArchive(inReq);
@@ -415,8 +413,9 @@ public class TimelineModule extends BaseMediaModule
 			lasttrack = captionsearcher.createNewData();
 			lasttrack.setProperty("sourcelang", selectedlang);
 			lasttrack.setProperty("assetid",  asset.getId());
+			lasttrack.setValue("transcribestatus", "needstranscribe");
+
 		}
-		lasttrack.setValue("transcribestatus", "needstranscribe");
 		captionsearcher.saveData(lasttrack);
 		inReq.putPageValue("track", lasttrack);
 //		inRe
@@ -434,7 +433,7 @@ public class TimelineModule extends BaseMediaModule
 		Searcher captionsearcher = archive.getSearcher("videotrack");
 
 		String selectedlang = inReq.getRequestParameter("selectedlang");
-		Collection hits = captionsearcher.query().exact("transcribestatus", "needstranscribe").search();
+		Collection hits = captionsearcher.query().or().exact("transcribestatus", "inprogress").exact("transcribestatus", "needstranscribe").search();
 		for (Iterator iterator = hits.iterator(); iterator.hasNext();)
 		{
 			Data track = (Data) iterator.next();
@@ -443,8 +442,9 @@ public class TimelineModule extends BaseMediaModule
 			{
 				if( lock != null)
 				{
-					manager.transcodeCaptions(track);
-					track.setValue("transcribestatus", "complete");
+//					manager.transcodeCaptions(track);
+//					track.setValue("transcribestatus", "complete");
+					manager.asyncTranscodeCaptions(track);
 				}
 			}
 			catch (Throwable ex)
@@ -458,6 +458,46 @@ public class TimelineModule extends BaseMediaModule
 				archive.releaseLock(lock);
 			}
 		}
-		
 	}	
+	public void addAutoTranslate(WebPageRequest inReq) throws Exception
+	{
+		//<path-action name="PathEventModule.runSharedEvent" runpath="/${catalogid}/events/conversions/autotranscode.html" allowduplicates="true" />
+		MediaArchive archive = getMediaArchive(inReq);
+		String selectedlang = inReq.getRequestParameter("selectedlang");
+		String targetlang = inReq.getRequestParameter("targetlang");
+
+		Asset asset = getAsset(inReq);
+		Searcher captionsearcher = archive.getSearcher("videotrack");
+		Data lasttrack = captionsearcher.query().exact("assetid", asset.getId()).exact("sourcelang", selectedlang).searchOne();
+		if( lasttrack == null)
+		{
+			throw new OpenEditException("No existing translation available to translate lang:" + selectedlang);
+		}
+		
+		Collection<Map> existingcaptions = (Collection)lasttrack.getValue("captions");
+		Collection<Map> captions = new ArrayList(existingcaptions);
+		Translation server = new Translation();
+		for(Map caption : captions)
+		{
+			String cliplabel = (String)caption.get("cliplabel"); 
+			if( cliplabel != null && !cliplabel.isEmpty() )
+			{
+				cliplabel = server.webTranslate(cliplabel,selectedlang,targetlang);
+				caption.put("cliplabel", cliplabel);
+			}
+		}
+		
+		Data newtrack = captionsearcher.query().exact("assetid", asset.getId()).exact("sourcelang", targetlang).searchOne();
+		if( newtrack == null)
+		{
+			log.info("Creating track " + asset.getId() + " " + targetlang);
+			newtrack = captionsearcher.createNewData();
+			newtrack.setProperty("sourcelang", targetlang);
+			newtrack.setProperty("assetid",  asset.getId());
+		}
+		newtrack.setValue("captions", captions);
+		captionsearcher.saveData(newtrack);
+		inReq.putPageValue("track", newtrack);
+		inReq.putSessionValue("selectedlang",targetlang);
+	}
 }
