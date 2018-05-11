@@ -414,6 +414,9 @@ public class MediaArchive implements CatalogEnabled
 
 	public String getMediaRenderType(String inFileFormat)
 	{
+		if(inFileFormat == null){
+			return "none";
+		}
 		return getTranscodeTools().getRenderTypeByFileFormat(inFileFormat);
 	}
 
@@ -439,7 +442,11 @@ public class MediaArchive implements CatalogEnabled
 			return "embedded";
 		}
 		String format = inAsset.get("fileformat");
-		return getTranscodeTools().getRenderTypeByFileFormat(format);
+		String finalformat =getTranscodeTools().getRenderTypeByFileFormat(format);
+		if(finalformat == null){
+			finalformat = "none";
+		}
+		return finalformat; 
 	}
 
 	public Data getDefaultAssetTypeForFile(String inFileName)
@@ -1574,12 +1581,12 @@ public class MediaArchive implements CatalogEnabled
 		return page.getLength() > 1;
 	}
 
-	public String asExportFileName(Asset inAsset, Data inPreset)
+	public String asExportFileName(Data inAsset, Data inPreset)
 	{
 		return asExportFileName(null, inAsset, inPreset);
 	}
 
-	public String asExportFileName(User inUser, Asset inAsset, Data inPreset)
+	public String asExportFileName(User inUser, Data inAsset, Data inPreset)
 	{
 		String format = inPreset.get("fileexportformat");
 		if (format == null)
@@ -1602,7 +1609,7 @@ public class MediaArchive implements CatalogEnabled
 		String shortname = PathUtilities.extractPageName(inAsset.getName());
 		tmp.put("shortfilename", shortname);
 
-		tmp.put("catalogid", inAsset.getCatalogId());
+		tmp.put("catalogid", getCatalogId());
 		tmp.put("sourcepath", inAsset.getSourcePath());
 		tmp.put("date", ymd.format(now));
 		tmp.put("time", time.format(now));
@@ -1979,7 +1986,6 @@ public class MediaArchive implements CatalogEnabled
 		{
 			String id = inRow.get("badge"); //text version of the ids
 			List b = (List) getCacheManager().get("badges", id); //Expires after 5 min, sort it?
-			b = null;
 			if (b == null)
 			{
 				b = new ArrayList<Data>();

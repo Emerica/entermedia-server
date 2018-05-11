@@ -377,6 +377,9 @@ public class BaseElasticSearcher extends BaseSearcher
 			inSearch.addAggregation((AbstractAggregationBuilder) inQuery.getAggregation());
 
 		}
+		
+		
+		
 
 	}
 
@@ -925,6 +928,13 @@ public class BaseElasticSearcher extends BaseSearcher
 		}
 
 		String fieldid = inDetail.getId();
+		if(inDetail.isMultiLanguage()) {
+
+			if(!fieldid.contains("_int")) {
+				fieldid = fieldid + "_int.en";//default to search the english
+			}
+		
+		}
 
 		if ("searchjoin".equals(inDetail.getDataType()))
 		{
@@ -1211,7 +1221,28 @@ public class BaseElasticSearcher extends BaseSearcher
 				// String before
 				find = QueryBuilders.rangeQuery(fieldid).includeLower(true).includeLower(true).from(after).to(before).includeUpper(true).includeLower(true);
 			}
+			else if ("ondate".equals(inTerm.getOperation()))
+			{
+				Date target = DateStorageUtil.getStorageUtil().parseFromStorage(valueof);
 
+				Calendar c = new GregorianCalendar();
+				c.setTime(target);
+				c.set(Calendar.HOUR_OF_DAY, 0);
+				c.set(Calendar.MINUTE, 0);
+				c.set(Calendar.SECOND, 0);
+				c.set(Calendar.MILLISECOND, 0);
+				Date fromtime = c.getTime();
+
+				c.set(Calendar.HOUR_OF_DAY, 23);
+				c.set(Calendar.MINUTE, 59);
+				c.set(Calendar.SECOND, 59);
+				c.set(Calendar.MILLISECOND, 999);
+
+				// inTerm.getParameter("beforeDate");
+
+				// String before
+				find = QueryBuilders.rangeQuery(fieldid).includeLower(true).includeLower(true).from(fromtime).to(c.getTime()).includeUpper(true).includeLower(true);
+			}
 			else
 			{
 				// Think this doesn't ever run. I think we use betweendates.
@@ -1966,6 +1997,9 @@ public class BaseElasticSearcher extends BaseSearcher
 					continue;
 				}
 				PropertyDetail detail = (PropertyDetail)inDetails.getDetail(propid);
+				if(detail == null) {
+					detail = inDetails.getLegacyDetail(propid);
+				}
 				if( detail == null && !propid.equals("description") && !propid.contains("_int"))
 				{
 					
@@ -2029,7 +2063,7 @@ public class BaseElasticSearcher extends BaseSearcher
 						{
 							date = (Date) value;
 						}
-						else
+						else if(value instanceof String)
 						{
 							date = DateStorageUtil.getStorageUtil().parseFromStorage((String) value);
 						}
@@ -2171,11 +2205,16 @@ public class BaseElasticSearcher extends BaseSearcher
 					else if(value instanceof String) 
 					{
 						GeoPoint point = new GeoPoint((String)value);
-						inData.setValue(key, point);
+						inContent.field(key, point);  
+						Position position = new Position(point.getLat(), point.getLon());
+						inData.setValue(key, position); //For next time?
 					}
 					else if(value instanceof GeoPoint) 
 					{
-						inData.setValue(key, value);
+						GeoPoint point = (GeoPoint)value;
+						inContent.field(key, point);  
+						Position position = new Position(point.getLat(), point.getLon());
+						inData.setValue(key, position); //For next time?
 					}
 				}
 				else if (key.equals("description")) // TODO: This should be
@@ -2260,31 +2299,12 @@ public class BaseElasticSearcher extends BaseSearcher
 			{
 				inContent.field("badge", badges);
 			}
-			/*
-			if (inDetails.isAllowDynamicFields())
-			{
-				Map props = inData.getProperties();
-				for (Iterator iterator = props.keySet().iterator(); iterator.hasNext();)
-				{
-					String key = (String) iterator.next();
-					if (shoudSkipField(key))
-					{
-						continue;
-					}
-					if (inDetails.getDetail(key) == null)
-					{
-						Object val = props.get(key);
-						7if (val != null)
-						{
-							checkMapping(key);
+			
+		
+			addCustomFields( inContent, inData);
 
-							inContent.field(key, val);
-						}
-					}
-				}
-			}
-			*/
 		}
+
 		catch (Exception ex)
 		{
 			if (ex instanceof OpenEditException)
@@ -2294,6 +2314,11 @@ public class BaseElasticSearcher extends BaseSearcher
 			throw new OpenEditException(ex);
 		}
 
+	}
+
+public void addCustomFields(XContentBuilder inContent, Data inData) {
+		// TODO Auto-generated method stub  Override this for custom searchers
+		
 	}
 
 //	private void setType(PropertyDetail detail) {

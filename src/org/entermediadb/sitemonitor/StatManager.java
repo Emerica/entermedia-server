@@ -1,8 +1,10 @@
 package org.entermediadb.sitemonitor;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
+import org.entermediadb.asset.MediaArchive;
 import org.openedit.CatalogEnabled;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
@@ -16,37 +18,52 @@ public class StatManager implements CatalogEnabled
 	private Stat buildStat(Stat stat, String inName, Object inValue, String error)
 	{
 		stat.setName(inName);
-		if (inValue instanceof Long)
-		{
-			if (!inName.contains("Cpu"))
-			{
-				stat.setValue((Long) inValue / SiteMonitorModule.MEGABYTE);
-			}
-			else
-			{
-				stat.setValue((Long) inValue);
-			}
-		}
-		if (inValue instanceof Double)
-		{
-			if (!inName.contains("Cpu"))
-			{
-				stat.setValue((Double) inValue / SiteMonitorModule.MEGABYTE);
-			}
-			else
-			{
-				stat.setValue((Double) inValue);
-			}
-		}
 		if (error != null)
 		{
-			stat.setError(true);
-			stat.setErrorMsg(error);
+			stat.setValue(error);
+		}
+		else
+		{
+			if (!inName.contains("Cpu"))
+			{
+				Long tmp = (Long)inValue / SiteMonitorModule.MEGABYTE;
+				stat.setValue((Object)tmp);
+			}
+			else
+			{
+				stat.setValue(inValue);
+			}
 		}
 		return stat;
 	}
 
-	public List<Stat> getStats()
+	private Stat getTotalAssetsCount(MediaArchive archive) {
+		Stat stat = new Stat();
+
+		stat.setName("totalassets");
+		Collection assets = archive.getAssetSearcher().query().all().search();
+		stat.setValue(assets.size());
+		return stat;
+	}
+
+	private Stat getClusterStatusHealth(MediaArchive archive) {
+		Stat stat = new Stat();
+
+		stat.setName("clusterhealth");
+		String health = archive.getNodeManager().getClusterHealth();
+		
+		if (health != null)
+		{
+			stat.setValue(health);
+		}
+		else
+		{
+			stat.setValue("can't retrieve cluster health status");
+		}
+		return stat;
+	}
+	
+	public List<Stat> getStats(MediaArchive archive)
 	{
 		List<Stat> stats = new ArrayList<Stat>();
 
@@ -74,6 +91,9 @@ public class StatManager implements CatalogEnabled
 					stats.add(stat);
 				}
 			}
+
+			stats.add(getTotalAssetsCount(archive));
+			stats.add(getClusterStatusHealth(archive));
 			return stats;
 		}
 		catch (Exception e)
