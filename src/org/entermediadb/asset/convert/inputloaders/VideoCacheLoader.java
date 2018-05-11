@@ -21,9 +21,18 @@ public class VideoCacheLoader implements InputLoader
     		return null;
     	}
 
+    	log.error(inStructions.getProperties().toString());
+    	String rendertype = inStructions.getOutputRenderType();
+    	if(rendertype==null) {
+    		log.error("Render type is null");
+    		return null;
+    		
+    	}
+
+
 		ContentItem input = null;
 
-		if (inStructions.getOutputRenderType().equals("image"))
+		if (rendertype.equals("image"))
 		{
 
 			if (inStructions.getMaxScaledSize() != null) //page numbers are 1 based
